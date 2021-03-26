@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <crtdbg.h>
-#include <C:\Users\Hilding\documents\repos\C\functions.h>
+#include <C:\Users\Hilding\documents\repos\linked\functions.h>
 // Checks: update_sum is not responsible, test add_lists disabled
 // create_list can be run indefinitely - with large numbers
 // run_handler is not the problem
@@ -14,7 +14,10 @@
 // probable: dereferencing null pointer
 // only seems to break when adding a several digit number to the sum. incremention seems to be alright.
 // consider: could be that variables inside functions are also global - possible problem?
-// Rebuild program - do not add to a; instead create a new list for each addition, dealloc both a, b
+// Rebuild program - do not add to a; instead create a new list for each addition, dealloc both a, b - not the issue
+// Program runs fine on debugger/gdb ... double check initializations!!
+// Sometimes tail is 8800000000000000 !! causes crash
+// change approach to list3
 int main () {
   char a[512], b[512];
   list_item *head1, *head2; 
@@ -27,13 +30,9 @@ int main () {
       printf ("Ange ett annat tal, eller avsluta med ctrl-c och valfritt input:");
       scanf ("%s", &b); // scanf("%s", &b)
       if (run) {
-        printf("creating list\n");
         head2 = create_list(b);
         test_list(head2);
-        printf("list created\n");
-        printf("adding lists\n");
-        add_lists(head1, head2); // <---- culprit. free_list()  some sort of memory leak in here
-        printf("lists added\n");
+        add_lists(head1, head2); // <---- culprit. free_list()  some sort of undefined behaviour/memory leak in here
         // potentially dealloc a, b, separate function iterating through all list items // not necessary, a, b const char[512]. head2 might need deallocation however. deallocat a aswell.
         // possible that old tail pointers indicate larger numbers than necessary. however, this should not be a problem given the create_list constructor ending in NULL!
         // test_list(head1); // should show updated list!
@@ -50,6 +49,5 @@ int main () {
   fil = fopen("result.txt", "w");
   fputs(a, fil);
   fclose(fil);
-  printf("exited");
 return 0;
 }

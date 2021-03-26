@@ -13,16 +13,6 @@ void run_handler(int handle) {
     run = 0;
 }
 
-void clean_input(char *raw_input, int size){
-    int i;
-    for (i=0; i<size; ++i){
-        if (raw_input[i] == '\n'){
-            raw_input[i] == '\0';
-            return;
-        }
-    }
-}
-
 struct List_item {
     int num;
     struct List_item *tail;
@@ -52,7 +42,7 @@ list_item *create_list (char *user_input) {
     int digits = strlen(user_input);
     char *reverse = strrev(user_input); // strrev reverses in-place!
     //printf("%s \n", reverse);
-    list_item *lsd = create_item((int) (reverse[0])-48);
+    list_item *lsd = create_item((int) (reverse[0])-48); // '0'
     list_item *head = lsd;
     int i;
     for (i=1; i<digits; ++i){
@@ -92,28 +82,28 @@ sum_carry add_carry2(int a, int b, int d) { // not the culprit
 
 void free_list(list_item *head){
     printf("entering free_list \n");
-    list_item *next = head->tail; // next is null, so does it free (null) ??
-    printf("next is %s \n", next);
-    while (next != 0) { // still crashes in here
-        printf("freeing \n");
+     // next is null, so does it free (null) ??
+    while (head->tail != 0) { // still crashes in here
+        //list_item *tmp = head;
+        list_item *next = head->tail;
+        printf("freeing %p \n", head);
         free(head); // messed up order in here?
         head = next;
-        next = head->tail;
-        printf("next is %s \n", next);
+        printf("next is %p \n", next);
     }
-    printf("freeing final");
+    printf("freeing final\n");
     free(head);
+    head = NULL;
 }
 
-void free_list2(list_item *head){
-    list_item *tmp;
-    while(head != 0){
-        tmp = head;
+void test_list(list_item *head){
+    while(head->tail !=0){
+        printf("%d \n", head->num);
         head = head->tail;
-        free(tmp);
-    }
+    };
+    printf("%d \n", head->num);
 }
-
+//  Funktionen ska ta emot pekare till två struct:ar och returnera en pekare till en struct.
 void add_lists (list_item *list1, list_item *list2) { // void method? shouldnt return anything, list1 values are changed and updated in-place
     // loop through each list
     // try add_carry at each step, insert into list1
@@ -122,12 +112,14 @@ void add_lists (list_item *list1, list_item *list2) { // void method? shouldnt r
     // list2 might need freeing after each addition however...
     // eventually crashes as more list_items need to be appended...
     // check windows subsystem for linux
-    // probable segmentation fault 
+    // probable segmentation fault or initialization error
+    // ISOLATED PROBLEM: First addition AFTER a new node has been created due to carry to MSD often crashes the program!
+    // Wrong way to traverse the list?
     sum_carry sc;
-    list_item *head2 = list2;
+    list_item *head1 = list1; // only saved for debugging
+    list_item *head2 = list2; // saved for freeing. does not change during code execution.
     sc.sum = 0;
     sc.carry = 0;
-    printf("sc created\n");
     
     while((list1->tail != 0) && (list2->tail != 0)){ // basic case, neither last element of list1 nor list2. addition can crash here if list2 is multi digit!
         printf("1: no NULL loop\n");
@@ -135,46 +127,59 @@ void add_lists (list_item *list1, list_item *list2) { // void method? shouldnt r
         list1->num = sc.sum;
         list1 = list1->tail;
         list2 = list2->tail;
+        printf("list1 is %p \n", list1);
+        printf("list2 is %p \n", list2);
     }
-    
+    printf("list1 is %p \n", list1);
+    printf("list2 is %p \n", list2);
     if ((list1->tail == 0) && (list2->tail == 0)) { // list1, list2 of equal length
         sc = add_carry2(list1->num, list2->num, sc.carry);
         list1->num = sc.sum;
         printf("2a:  list1 == list2 length\n");
     }
-    if (list1->tail != 0) { // if list1 longer than list2 // causes errors
+    if (list1->tail != 0) { // if list1 longer than list2
         sc = add_carry2(list1->num, list2->num, sc.carry);
         list1->num = sc.sum;
         list1 = list1->tail;
         printf("2b:  list1 > list2\n");
-        while(list1->tail != 0){
+        printf("list1 is %p \n", list1);
+        printf("list2 is %p \n", list2);
+        while(list1->tail != 0){// crashes here at final execution (i.e. when list1->tail == 0)
             printf("2b: loop\n");
             sc = add_carry2(list1->num, 0, sc.carry);
             printf("2b: loop added\n");
-            list1->num = sc.sum;
-            list1 = list1->tail;
-        }
+            list1->num = sc.sum; 
+            list1 = list1->tail; //
+            printf("list1 is %p \n", list1);
+            printf("list2 is %p \n", list2);
+        } 
+        printf("adding last\n");
         sc = add_carry2(list1->num, 0, sc.carry);
+        printf("last added\n");
         list1->num = sc.sum;
     }
+    // This causes problems - list1 expands into list2?
     if (list2->tail != 0) { // if list2 longer than list1
         sc = add_carry2(list1->num, list2->num, sc.carry);
         list1->num = sc.sum;
         list2 = list2->tail;
         printf("2c:  list2 > list1\n");
-        while(list2->tail != 0){
+        while(list2->tail != 0){ // can still go to 000
             printf("2c: loop\n");
             sc = add_carry2(list2->num, 0, sc.carry); // may crash here
             printf("2c: loop added\n");
             list_item *dig = create_item(sc.sum); // create new list1 element
             list1->tail = dig;
             list1 = dig;
-            list2 = list2->tail;
+            list2 = list2->tail; // here it breaks dereferencing null pointer
+            printf("list1 is %p \n", list1);
+            printf("list2 is %p \n", list2);
         }
         sc = add_carry2(list2->num, 0, sc.carry);
         list_item *dig = create_item(sc.sum); // create new list1 element
         list1->tail = dig;
         list1 = dig;
+        printf("list1 is %p \n", list1); // riddle me this
     }
     printf("2: done\n");
     if (sc.carry != 0) { // create new list1 element, insert carry in num, tail->NULL
@@ -184,12 +189,16 @@ void add_lists (list_item *list1, list_item *list2) { // void method? shouldnt r
         list1 = dig;
     }
     printf("freeing list2 \n");
-    //free_list2(head2); // may crash here, free_list() when list2 is multi-digit! // earlier error: fed directly list2 which has already been iterated!!
+    printf("list1 is %p \n", list1); // sometimes moves into list2 causing crash!!
+    test_list(head1);
+    printf("list2 is %p \n", list2);
+    test_list(head2);
+    //free_list(head2); // usually crashes when freeing last element with null pointer
     // segmentation fault: Exception has occurred. Trace/breakpoint trap
     printf("list2 freed \n");
 }
 
-list_item *add_lists2 (list_item *list1, list_item *list2) { // för felsökning
+void add_lists2 (list_item *list1, list_item *list2) { // för felsökning
     //sum_carry sc;
     list_item *head1 = list1;
     list_item *head2 = list2;
@@ -259,13 +268,6 @@ list_item *add_lists2 (list_item *list1, list_item *list2) { // för felsökning
     printf("list2 freed \n");
 }
 
-void test_list(list_item *head){
-    while(head->tail !=0){
-        printf("%d \n", head->num);
-        head = head->tail;
-    };
-    printf("%d \n", head->num);
-}
 
 void update_sum(list_item *head, char *a_item){ // Should work.
     char *buffer = malloc(512);
@@ -273,7 +275,7 @@ void update_sum(list_item *head, char *a_item){ // Should work.
     int length = 0;
     // printf("entering update sum\n");
     while (head->tail != 0 && length<= max_len) { 
-        printf("head->tail is: %s \n", head); 
+        //printf("head->tail is: %s \n", head); 
         //printf("entering head->tail\n");
         length += snprintf(buffer+length, max_len-length, "%c", head->num + '0'); // add + '0' to turn into equal char!! // +length probably not necessary.
         //puts(buffer);
