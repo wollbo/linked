@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
-#include <C:\Users\Hilding\documents\repos\C\functions.h>
+#include <C:\Users\Hilding\documents\repos\linked\functions.h>
 
 int main () {
   int a, b, s; // eventually, change to char
